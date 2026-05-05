@@ -1,7 +1,18 @@
 const express = require("express");
+const cors = require("cors");
+
 const app = express();
 
-// 🔴 WEKA HAPA (routes zote za API)
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public"));
+
+// HOME ROUTE (Frontend)
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
+
+// STATUS API
 app.get("/status", (req, res) => {
   res.json({
     status: "online",
@@ -10,13 +21,9 @@ app.get("/status", (req, res) => {
   });
 });
 
-// homepage (optional)
-app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/index.html");
-});
-
-// server start
+// PORT FIX (VERY IMPORTANT FOR HEROKU)
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log("🚀 Server running on port " + PORT);
 });
