@@ -1,58 +1,90 @@
 const express = require("express");
 const cors = require("cors");
 
-const app = express();
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason
+} = require("@whiskeysockets/baileys");
 
-/* ========= MIDDLEWARE ========= */
+const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-/* ========= HOME ========= */
-app.get("/", (req, res) => {
-  res.send("🚀 JAMPAN XMD SERVER RUNNING");
-});
+let sock;
 
-/* ========= STATUS ========= */
+/* 🔥 INIT WHATSAPP SOCKET */
+async function startBot() {
+  const { state, saveCreds } = await useMultiFileAuthState("session");
+
+  sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: false
+  });
+
+  sock.ev.on("creds.update", saveCreds);
+
+  sock.ev.on("connection.update", (update) => {
+    const { connection, lastDisconnect } = update;
+
+    if (connection === "close") {
+      const shouldReconnect =
+        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+
+      if (shouldReconnect) {
+        startBot();
+      }
+    }
+
+    if (connection === "open") {
+      console.log("✅ WhatsApp Connected");
+    }
+  });
+}
+
+/* 🚀 START BOT */
+startBot();
+
+/* STATUS */
 app.get("/status", (req, res) => {
   res.json({
-    status: "online",
-    bot: "JAMPAN XMD",
-    owner: "Kelvin Jampan",
-    time: new Date().toISOString()
+    status: sock ? "running" : "starting"
   });
 });
 
-/* ========= PAIR (8 DIGIT) ========= */
-app.get("/pair", (req, res) => {
+/* 🔥 REAL PAIRING */
+app.get("/pair", async (req, res) => {
   const number = req.query.number;
 
   if (!number) {
-    return res.status(400).json({
-      error: "Number is required"
-    });
+    return res.status(400).json({ error: "Number required" });
   }
 
-  // 8 digit code (format ya WhatsApp)
-  const code = Math.floor(10000000 + Math.random() * 90000000);
+  try {
+    if (!sock) {
+      return res.json({ error: "Bot not ready" });
+    }
 
-  res.json({
-    number,
-    code: code.toString(),
-    status: "Pair code generated"
-  });
+    // muhimu: namba lazima iwe bila + (mfano 255...)
+    const code = await sock.requestPairingCode(number);
+
+    res.json({
+      number,
+      code,
+      status: "REAL PAIR CODE GENERATED"
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.json({
+      error: "Failed to generate REAL code"
+    });
+  }
 });
 
-/* ========= 404 ========= */
-app.use((req, res) => {
-  res.status(404).json({
-    error: "Route not found"
-  });
-});
-
-/* ========= SERVER ========= */
+/* SERVER */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("🚀 Server running on port " + PORT);
+  console.log("🚀 Server running on " + PORT);
 });
