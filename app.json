@@ -1,0 +1,24 @@
+{
+  "name": "JAMPAN-XMD Bot",
+  "description": "WhatsApp Bot with Pairing System (Baileys)",
+  "repository": "https://github.com/Jampan-XDM/JAMPAN-XMD",
+  "logo": "https://files.catbox.moe/fzjhed.png",
+  "keywords": ["whatsapp", "bot", "baileys", "ai"],
+  "env": {
+    "PORT": {
+      "description": "Port for server",
+      "value": "3000"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}
