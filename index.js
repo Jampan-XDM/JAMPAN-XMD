@@ -11,9 +11,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-let sock;
+let sock = null;
+let botReady = false;
 
-/* 🔥 INIT WHATSAPP SOCKET */
+/* 🔥 START BOT */
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("session");
 
@@ -27,7 +28,14 @@ async function startBot() {
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect } = update;
 
+    if (connection === "open") {
+      console.log("✅ BOT CONNECTED");
+      botReady = true;
+    }
+
     if (connection === "close") {
+      botReady = false;
+
       const shouldReconnect =
         lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
 
@@ -35,49 +43,43 @@ async function startBot() {
         startBot();
       }
     }
-
-    if (connection === "open") {
-      console.log("✅ WhatsApp Connected");
-    }
   });
 }
 
-/* 🚀 START BOT */
 startBot();
 
 /* STATUS */
 app.get("/status", (req, res) => {
   res.json({
-    status: sock ? "running" : "starting"
+    bot: botReady ? "online" : "starting"
   });
 });
 
-/* 🔥 REAL PAIRING */
+/* 🔥 REAL PAIR FIXED */
 app.get("/pair", async (req, res) => {
   const number = req.query.number;
 
   if (!number) {
-    return res.status(400).json({ error: "Number required" });
+    return res.json({ error: "Number required" });
+  }
+
+  if (!botReady) {
+    return res.json({ error: "Bot not ready, wait few seconds" });
   }
 
   try {
-    if (!sock) {
-      return res.json({ error: "Bot not ready" });
-    }
-
-    // muhimu: namba lazima iwe bila + (mfano 255...)
     const code = await sock.requestPairingCode(number);
 
     res.json({
       number,
-      code,
-      status: "REAL PAIR CODE GENERATED"
+      code
     });
 
   } catch (err) {
-    console.log(err);
+    console.log("PAIR ERROR:", err);
+
     res.json({
-      error: "Failed to generate REAL code"
+      error: "Pair failed (check logs)"
     });
   }
 });
