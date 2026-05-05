@@ -9,12 +9,12 @@
       "description": "Port for server",
       "value": "3000"
     }
+  },
   "formation": {
-  "web": {
-    "quantity": 1,
-    "size": "basic"
-  }
-}
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
   },
   "buildpacks": [
     {
