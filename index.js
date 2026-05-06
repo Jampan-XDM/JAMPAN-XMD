@@ -80,7 +80,7 @@ app.get("/pair", async (req, res) => {
 
   if (!sock || !sock.user) {
     return res.json({
-      error: "Bot not connected yet. Try again in few seconds."
+      error: "Bot not connected yet, wait..."
     });
   }
 
@@ -89,14 +89,15 @@ app.get("/pair", async (req, res) => {
 
     res.json({
       number,
-      code
+      code,
+      message: "Enter this code IMMEDIATELY on WhatsApp"
     });
 
   } catch (err) {
-    console.log("PAIR ERROR:", err);
+    console.log(err);
 
     res.json({
-      error: "Pair failed — check logs"
+      error: "Pair failed"
     });
   }
 });
