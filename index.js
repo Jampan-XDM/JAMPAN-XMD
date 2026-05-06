@@ -8,54 +8,69 @@ const {
 } = require("@whiskeysockets/baileys");
 
 const app = express();
+
+/* ========= MIDDLEWARE ========= */
 app.use(cors());
 app.use(express.json());
 
+/* ========= GLOBAL VARS ========= */
 let sock = null;
 let botReady = false;
 
-/* 🔥 START BOT */
+/* ========= START BOT ========= */
 async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState("session");
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState("session");
 
-  sock = makeWASocket({
-    auth: state,
-    printQRInTerminal: false
-  });
+    sock = makeWASocket({
+      auth: state,
+      printQRInTerminal: false
+    });
 
-  sock.ev.on("creds.update", saveCreds);
+    sock.ev.on("creds.update", saveCreds);
 
-  sock.ev.on("connection.update", (update) => {
-    const { connection, lastDisconnect } = update;
+    sock.ev.on("connection.update", (update) => {
+      const { connection, lastDisconnect } = update;
 
-    if (connection === "open") {
-      console.log("✅ BOT CONNECTED");
-      botReady = true;
-    }
-
-    if (connection === "close") {
-      botReady = false;
-
-      const shouldReconnect =
-        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-
-      if (shouldReconnect) {
-        startBot();
+      if (connection === "open") {
+        console.log("✅ BOT CONNECTED");
+        botReady = true;
       }
-    }
-  });
+
+      if (connection === "close") {
+        botReady = false;
+
+        const shouldReconnect =
+          lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+
+        if (shouldReconnect) {
+          console.log("🔄 Reconnecting...");
+          startBot();
+        }
+      }
+    });
+
+  } catch (err) {
+    console.log("BOT START ERROR:", err);
+  }
 }
 
+/* START BOT */
 startBot();
 
-/* STATUS */
+/* ========= HOME ========= */
+app.get("/", (req, res) => {
+  res.send("🚀 JAMPAN XMD RUNNING");
+});
+
+/* ========= STATUS ========= */
 app.get("/status", (req, res) => {
   res.json({
     bot: botReady ? "online" : "starting"
   });
 });
 
-/* 🔥 REAL PAIR FIXED */
+/* ========= PAIR ========= */
 app.get("/pair", async (req, res) => {
   const number = req.query.number;
 
@@ -63,8 +78,8 @@ app.get("/pair", async (req, res) => {
     return res.json({ error: "Number required" });
   }
 
-  if (!botReady) {
-    return res.json({ error: "Bot not ready, wait few seconds" });
+  if (!sock) {
+    return res.json({ error: "Bot not initialized" });
   }
 
   try {
@@ -72,21 +87,29 @@ app.get("/pair", async (req, res) => {
 
     res.json({
       number,
-      code
+      code,
+      status: "Pair code generated"
     });
 
   } catch (err) {
     console.log("PAIR ERROR:", err);
 
     res.json({
-      error: "Pair failed (check logs)"
+      error: "Failed to generate code"
     });
   }
 });
 
-/* SERVER */
+/* ========= 404 ========= */
+app.use((req, res) => {
+  res.status(404).json({
+    error: "Route not found"
+  });
+});
+
+/* ========= SERVER ========= */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("🚀 Server running on " + PORT);
+  console.log("🚀 Server running on port " + PORT);
 });
