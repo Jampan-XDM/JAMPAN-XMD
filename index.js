@@ -78,8 +78,10 @@ app.get("/pair", async (req, res) => {
     return res.json({ error: "Number required" });
   }
 
-  if (!sock) {
-    return res.json({ error: "Bot not initialized" });
+  if (!sock || !sock.user) {
+    return res.json({
+      error: "Bot not connected yet. Try again in few seconds."
+    });
   }
 
   try {
@@ -87,15 +89,14 @@ app.get("/pair", async (req, res) => {
 
     res.json({
       number,
-      code,
-      status: "Pair code generated"
+      code
     });
 
   } catch (err) {
     console.log("PAIR ERROR:", err);
 
     res.json({
-      error: "Failed to generate code"
+      error: "Pair failed — check logs"
     });
   }
 });
